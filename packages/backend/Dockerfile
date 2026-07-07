@@ -8,7 +8,10 @@ COPY . .
 
 RUN npm install
 
-# Now the prisma binary is at /app/node_modules/.bin/prisma
+# Make prisma binary executable (required when built on Windows)
+RUN chmod +x /app/node_modules/.bin/prisma
+
+# Generate the Prisma client
 RUN /app/node_modules/.bin/prisma generate
 
 # Switch to the backend package for the runtime
