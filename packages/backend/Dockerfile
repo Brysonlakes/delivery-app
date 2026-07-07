@@ -8,15 +8,16 @@ COPY . .
 
 RUN npm install
 
-# Make prisma binary executable (required when built on Windows)
+# Make prisma binary executable
 RUN chmod +x /app/node_modules/.bin/prisma
+
+# Move to the backend directory where the schema is
+WORKDIR /app/packages/backend
 
 # Generate the Prisma client
 RUN /app/node_modules/.bin/prisma generate
 
-# Switch to the backend package for the runtime
-WORKDIR /app/packages/backend
-
+# (already in the backend directory, so the CMD will run from here)
 EXPOSE 10000
 
 CMD ["node", "server.js"]
