@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  passwordHash   String
+  role           String   @default("customer") // "customer" | "shop_owner" | "admin" | "driver"
+  fullName       String
+  phone          String?
+  createdAt      DateTime @default(now())
+  shop           Shop?
+  orders         Order[]
+  ordersAsDriver Order[]  @relation("DriverOrders")
+}
+
+model Shop {
+  id              String      @id @default(uuid())
+  ownerId         String      @unique
+  owner           User        @relation(fields: [ownerId], references: [id])
+  name            String
+  description     String?
+  address         String
+  isApproved      Boolean     @default(false)
+  isOpen          Boolean     @default(true)
+  categories      Category[]
+  menuItems       MenuItem[]
+  orders          Order[]
+
+  // Payment gateway credentials
+  payfastMerchantId   String?
+  payfastMerchantKey  String?
+  payfastPassphrase   String?
+  yocoSecretKey       String?
+  paystackSecretKey   String?
+  eftBankName         String?
+  eftAccountNumber    String?
+  eftAccountHolder    String?
+}
+
+model Category {
+  id       String     @id @default(uuid())
+  shopId   String
+  shop     Shop       @relation(fields: [shopId], references: [id])
+  name     String
+  items    MenuItem[]
+}
+
+model MenuItem {
+  id                String      @id @default(uuid())
+  shopId            String
+  shop              Shop        @relation(fields: [shopId], references: [id])
+  categoryId        String?
+  category          Category?   @relation(fields: [categoryId], references: [id])
+  name              String
+  description       String?
+  price             Float
+  imageUrl          String?
+  dietaryTags       String?
+  isAvailable       Boolean     @default(true)
+  stockQuantity     Int?
+  lowStockThreshold Int?
+  orderItems        OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  customerId    String
+  customer      User        @relation(fields: [customerId], references: [id])
+  shopId        String
+  shop          Shop        @relation(fields: [shopId], references: [id])
+  driverId      String?
+  driver        User?       @relation("DriverOrders", fields: [driverId], references: [id])
+  status        String      @default("pending") // pending, accepted, preparing, ready_for_pickup, out_for_delivery, delivered, cancelled
+  totalAmount   Float
+  deliveryFee   Float       @default(0)
+  shopOwnerAmount Float?
+  driverAmount  Float?
+  platformAmount Float?
+  paymentStatus String      @default("pending") // pending, cash_pending, eft_pending, paid
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+
+  // Separate payout tracking
+  shopOwnerPayoutId String?
+  shopOwnerPayout   Payout?   @relation("ShopOwnerPayout", fields: [shopOwnerPayoutId], references: [id])
+  driverPayoutId    String?
+  driverPayout      Payout?   @relation("DriverPayout", fields: [driverPayoutId], references: [id])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity    Int
+  itemPrice   Float
+}
+
+model Payout {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String   // "shop_owner" or "driver"
+  amount    Float
+  status    String   @default("pending") // "pending" | "paid"
+  createdAt DateTime @default(now())
+
+  shopOwnerOrders Order[] @relation("ShopOwnerPayout")
+  driverOrders    Order[] @relation("DriverPayout")
+}
+
+model PlatformConfig {
+  id                 Int      @id @default(autoincrement())
+  paystackSecretKey  String?
+}
+
