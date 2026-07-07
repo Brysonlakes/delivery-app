@@ -8,9 +8,11 @@ COPY . .
 
 RUN npm install
 
-WORKDIR /app/packages/backend
+# Now the prisma binary is at /app/node_modules/.bin/prisma
+RUN /app/node_modules/.bin/prisma generate
 
-RUN ./node_modules/.bin/prisma generate
+# Switch to the backend package for the runtime
+WORKDIR /app/packages/backend
 
 EXPOSE 10000
 
