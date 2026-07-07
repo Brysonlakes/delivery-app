@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "npx prisma generate && node server.js"
+    "build": "npx prisma generate",
+    "start": "node server.js"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
