@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "build": "prisma generate",
     "start": "node server.js"
   },
   "dependencies": {
