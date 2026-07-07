@@ -35,6 +35,7 @@ const io = new Server(server, {
       'https://shop-dashboard-psi.vercel.app',
       'https://driver-app-lilac.vercel.app',
       ' https://admin-panel-liard-eight-12.vercel.app',
+'https://driver-app-lilac.vercel.app',  // <-- add this line
     ],
     methods: ['GET', 'POST'],
   },
@@ -79,6 +80,7 @@ app.use(cors({
     'https://driver-app-lilac.vercel.app',
     'https://shop-dashboard-psi.vercel.app',
     'https://customer-app-seven-xi.vercel.app',
+    'https://driver-app-lilac.vercel.app',  // <-- add this line
   ],
   exposedHeaders: ['Content-Range'],
 }));
