@@ -31,7 +31,7 @@ const io = new Server(server, {
       'http://192.168.18.122:5175',
       'http://192.168.18.122:5176',
       'http://192.168.18.122:5177',
-      'https://customer-app-seven-xi.vercel.app',
+      'https://customer-app-lemon-one.vercel.app',
       'https://shop-dashboard-puce.vercel.app',
       'https://admin-panel-liard-eight-12.vercel.app',
       'https://driver-app-five-zeta.vercel.app',  // <-- add this line
@@ -77,7 +77,7 @@ app.use(cors({
     'http://192.168.18.122:5177',
     'https://admin-panel-liard-eight-12.vercel.app',
     'https://shop-dashboard-puce.vercel.app',
-    'https://customer-app-seven-xi.vercel.app',
+    'https://customer-app-lemon-one.vercel.app',
     'https://driver-app-five-zeta.vercel.app',  // <-- add this line
   ],
   exposedHeaders: ['Content-Range'],
