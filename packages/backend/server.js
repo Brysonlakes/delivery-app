@@ -509,12 +509,12 @@ app.post('/api/paystack/initialize', authenticate, async (req, res) => {
 
 app.get('/api/paystack/callback', async (req, res) => {
   const { orderId, reference } = req.query;
-  if (!orderId || !reference) return res.redirect(`http://192.168.18.122:5173/orders?error=missing_params`);
+  if (!orderId || !reference) return res.redirect(`https://customer-app-seven-xi.vercel.app/orders?error=missing_params`);
 
   try {
     const platformConfig = await prisma.platformConfig.findFirst();
     const secretKey = platformConfig?.paystackSecretKey;
-    if (!secretKey) return res.redirect(`http://192.168.18.122:5173/orders?error=no_platform_key`);
+    if (!secretKey) return res.redirect(`https://customer-app-seven-xi.vercel.app/orders?error=no_platform_key`);
 
     const verification = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
