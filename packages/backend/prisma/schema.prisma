@@ -19,6 +19,9 @@ model User {
   shop           Shop?
   orders         Order[]
   ordersAsDriver Order[]  @relation("DriverOrders")
+  bankName         String?
+  accountNumber    String?
+  accountHolder    String?
 }
 
 model Shop {

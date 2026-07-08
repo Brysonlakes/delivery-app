@@ -399,6 +399,34 @@ app.post('/api/upload', authenticate, shopOwnerAuth, upload.single('image'), (re
   res.json({ imageUrl: `http://192.168.18.122:4000/uploads/${req.file.filename}` });
 });
 
+// Save driver bank details
+app.put('/api/my-bank-details', authenticate, async (req, res) => {
+  const { bankName, accountNumber, accountHolder } = req.body;
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        bankName: bankName || null,
+        accountNumber: accountNumber || null,
+        accountHolder: accountHolder || null,
+      },
+      select: { id: true, bankName: true, accountNumber: true, accountHolder: true },
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to save bank details' });
+  }
+});
+
+// Get own bank details
+app.get('/api/my-bank-details', authenticate, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { bankName: true, accountNumber: true, accountHolder: true },
+  });
+  res.json(user || { bankName: '', accountNumber: '', accountHolder: '' });
+});
+
 // ===== DRIVER ROUTES =====
 app.get('/api/driver/available-orders', authenticate, driverAuth, async (req, res) => {
   const orders = await prisma.order.findMany({
@@ -620,7 +648,8 @@ app.put('/api/me', authenticate, async (req, res) => {
 // ===== PAYOUT ROUTES (admin only) =====
 
 // Get summary of unpaid amounts grouped by shop owner 
-app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
+
+  app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
 
   const orders = await prisma.order.findMany({
@@ -666,7 +695,9 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
           fullName: '',
           role: 'driver',
           totalOwed: 0,
-          // drivers don't have bank fields yet, but we can fetch their email below
+          bankName: '',
+          accountNumber: '',
+          accountHolder: '',
         };
       }
       map[key].totalOwed += order.driverAmount || 0;
@@ -677,13 +708,18 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
   if (userIds.length) {
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, fullName: true, email: true },
+      select: { id: true, fullName: true, email: true, bankName: true, accountNumber: true, accountHolder: true },
     });
     for (const u of users) {
       for (const key of Object.keys(map)) {
         if (map[key].userId === u.id) {
           map[key].fullName = u.fullName;
           map[key].email = u.email;
+          if (map[key].role === 'driver') {
+            map[key].bankName = u.bankName || '';
+            map[key].accountNumber = u.accountNumber || '';
+            map[key].accountHolder = u.accountHolder || '';
+          }
         }
       }
     }
