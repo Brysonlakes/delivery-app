@@ -619,7 +619,7 @@ app.put('/api/me', authenticate, async (req, res) => {
 
 // ===== PAYOUT ROUTES (admin only) =====
 
-// Get summary of unpaid amounts grouped by shop owner / driver (separate)
+// Get summary of unpaid amounts grouped by shop owner 
 app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
 
@@ -629,7 +629,7 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
       status: { not: 'cancelled' },
     },
     include: {
-      shop: { select: { ownerId: true } },
+      shop: { select: { ownerId: true, eftBankName: true, eftAccountNumber: true, eftAccountHolder: true } },
     },
   });
 
@@ -642,7 +642,15 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
       if (shopOwnerId) {
         const key = `shop_${shopOwnerId}`;
         if (!map[key]) {
-          map[key] = { userId: shopOwnerId, fullName: '', role: 'shop_owner', totalOwed: 0 };
+          map[key] = {
+            userId: shopOwnerId,
+            fullName: '',
+            role: 'shop_owner',
+            totalOwed: 0,
+            bankName: order.shop?.eftBankName || '',
+            accountNumber: order.shop?.eftAccountNumber || '',
+            accountHolder: order.shop?.eftAccountHolder || '',
+          };
         }
         map[key].totalOwed += order.shopOwnerAmount || 0;
       }
@@ -653,7 +661,13 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
       const driverId = order.driverId;
       const key = `driver_${driverId}`;
       if (!map[key]) {
-        map[key] = { userId: driverId, fullName: '', role: 'driver', totalOwed: 0 };
+        map[key] = {
+          userId: driverId,
+          fullName: '',
+          role: 'driver',
+          totalOwed: 0,
+          // drivers don't have bank fields yet, but we can fetch their email below
+        };
       }
       map[key].totalOwed += order.driverAmount || 0;
     }
@@ -663,12 +677,13 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
   if (userIds.length) {
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, fullName: true },
+      select: { id: true, fullName: true, email: true },
     });
     for (const u of users) {
       for (const key of Object.keys(map)) {
         if (map[key].userId === u.id) {
           map[key].fullName = u.fullName;
+          map[key].email = u.email;
         }
       }
     }
@@ -676,6 +691,8 @@ app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
 
   res.json(Object.values(map));
 });
+
+
 
 // Create a payout (separate for shop owner or driver)
 app.post('/api/admin/payouts', authenticate, async (req, res) => {
