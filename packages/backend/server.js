@@ -33,8 +33,8 @@ const io = new Server(server, {
       'http://192.168.18.122:5177',
       'https://customer-app-seven-xi.vercel.app',
       'https://shop-dashboard-puce.vercel.app',
-      ' https://admin-panel-liard-eight-12.vercel.app',
-'https://driver-app-liard.vercel.app',  // <-- add this line
+      'https://admin-panel-liard-eight-12.vercel.app',
+      'https://driver-app-five-zeta.vercel.app',  // <-- add this line
     ],
     methods: ['GET', 'POST'],
   },
@@ -78,7 +78,7 @@ app.use(cors({
     'https://admin-panel-liard-eight-12.vercel.app',
     'https://shop-dashboard-puce.vercel.app',
     'https://customer-app-seven-xi.vercel.app',
-    'https://driver-app-liard.vercel.app',  // <-- add this line
+    'https://driver-app-five-zeta.vercel.app',  // <-- add this line
   ],
   exposedHeaders: ['Content-Range'],
 }));
@@ -532,13 +532,13 @@ app.get('/api/paystack/callback', async (req, res) => {
       }
       await prisma.order.update({ where: { id: orderId }, data: { status: 'pending', paymentStatus: 'paid' } });
       io.to(`shop-${order.shopId}`).emit('newOrder', { orderId: order.id, message: `New paid order! Total: R${order.totalAmount.toFixed(2)}` });
-      return res.redirect(`http://192.168.18.122:5173/orders?paid=1`);
+      return res.redirect(`https://customer-app-seven-xi.vercel.app/orders?paid=1`);
     } else {
-      return res.redirect(`http://192.168.18.122:5173/orders?payment=failed`);
+      return res.redirect(`https://customer-app-seven-xi.vercel.app/orders?payment=failed`);
     }
   } catch (err) {
     console.error('Paystack callback error:', err.response?.data || err.message);
-    return res.redirect(`http://192.168.18.122:5173/orders?error=1`);
+    return res.redirect(`https://customer-app-seven-xi.vercel.app/orders?error=1`);
   }
 });
 
