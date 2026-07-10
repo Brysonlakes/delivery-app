@@ -34,7 +34,7 @@ const io = new Server(server, {
       'https://customer-app-lemon-one.vercel.app',
       'https://shop-dashboard-puce.vercel.app',
       'https://admin-panel-liard-eight-12.vercel.app',
-      'https://driver-app-five-zeta.vercel.app',  // <-- add this line
+      'https://driver-app-five-zeta.vercel.app',
     ],
     methods: ['GET', 'POST'],
   },
@@ -78,7 +78,7 @@ app.use(cors({
     'https://admin-panel-liard-eight-12.vercel.app',
     'https://shop-dashboard-puce.vercel.app',
     'https://customer-app-lemon-one.vercel.app',
-    'https://driver-app-five-zeta.vercel.app',  // <-- add this line
+    'https://driver-app-five-zeta.vercel.app',
   ],
   exposedHeaders: ['Content-Range'],
 }));
@@ -277,6 +277,24 @@ app.get('/api/orders/my', authenticate, async (req, res) => {
   res.json(orders);
 });
 
+// Allow a customer to mark their own order as paid
+app.put('/api/orders/:id/payment-status', authenticate, async (req, res) => {
+  const { paymentStatus } = req.body;
+  if (!['paid'].includes(paymentStatus)) return res.status(400).json({ message: 'Invalid payment status' });
+
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  if (!order || order.customerId !== req.user.id) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
+
+  await prisma.order.update({
+    where: { id: req.params.id },
+    data: { paymentStatus },
+  });
+
+  res.json({ success: true });
+});
+
 // ===== SHOP OWNER ROUTES =====
 app.get('/api/my-shop', authenticate, shopOwnerAuth, (req, res) => res.json(req.shop));
 
@@ -394,24 +412,6 @@ app.put('/api/my-shop/orders/:id/payment-status', authenticate, shopOwnerAuth, a
   res.json({ success: true });
 });
 
-// Allow a customer to mark their own order as paid (used by Paystack inline popup)
-app.put('/api/orders/:id/payment-status', authenticate, async (req, res) => {
-  const { paymentStatus } = req.body;
-  if (!['paid'].includes(paymentStatus)) return res.status(400).json({ message: 'Invalid payment status' });
-
-  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
-  if (!order || order.customerId !== req.user.id) {
-    return res.status(404).json({ message: 'Order not found' });
-  }
-
-  await prisma.order.update({
-    where: { id: req.params.id },
-    data: { paymentStatus },
-  });
-
-  res.json({ success: true });
-});
-
 app.post('/api/upload', authenticate, shopOwnerAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
   res.json({ imageUrl: `http://192.168.18.122:4000/uploads/${req.file.filename}` });
@@ -508,7 +508,7 @@ app.post('/api/paystack/initialize', authenticate, async (req, res) => {
         email: req.user.email,
         amount: Math.round(order.totalAmount * 100),
         currency: 'ZAR',
-        callback_url: `${BACKEND_URL}/api/paystack/callback?orderId=${order.id}`,
+        callback_url: `https://customer-app-lemon-one.vercel.app/orders?paid=1`,
         metadata: { orderId: order.id },
       },
       { headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' } }
@@ -532,7 +532,7 @@ app.get('/api/paystack/callback', async (req, res) => {
   try {
     const platformConfig = await prisma.platformConfig.findFirst();
     const secretKey = platformConfig?.paystackSecretKey;
-    if (!secretKey) return return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?error=no_platform_key`);
+    if (!secretKey) return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?error=no_platform_key`);
 
     const verification = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
@@ -552,7 +552,7 @@ app.get('/api/paystack/callback', async (req, res) => {
       io.to(`shop-${order.shopId}`).emit('newOrder', { orderId: order.id, message: `New paid order! Total: R${order.totalAmount.toFixed(2)}` });
       return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?paid=1`);
     } else {
-     return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?payment=failed`);
+      return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?payment=failed`);
     }
   } catch (err) {
     console.error('Paystack callback error:', err.response?.data || err.message);
@@ -664,10 +664,7 @@ app.put('/api/me', authenticate, async (req, res) => {
 });
 
 // ===== PAYOUT ROUTES (admin only) =====
-
-// Get summary of unpaid amounts grouped by shop owner 
-
-  app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
+app.get('/api/admin/payouts/summary', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
 
   const orders = await prisma.order.findMany({
@@ -683,7 +680,6 @@ app.put('/api/me', authenticate, async (req, res) => {
   const map = {};
 
   for (const order of orders) {
-    // Shop owner
     if (!order.shopOwnerPayoutId) {
       const shopOwnerId = order.shop?.ownerId;
       if (shopOwnerId) {
@@ -703,7 +699,6 @@ app.put('/api/me', authenticate, async (req, res) => {
       }
     }
 
-    // Driver
     if (order.driverId && !order.driverPayoutId) {
       const driverId = order.driverId;
       const key = `driver_${driverId}`;
@@ -746,9 +741,6 @@ app.put('/api/me', authenticate, async (req, res) => {
   res.json(Object.values(map));
 });
 
-
-
-// Create a payout (separate for shop owner or driver)
 app.post('/api/admin/payouts', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
   const { userId, role } = req.body;
@@ -806,7 +798,6 @@ app.post('/api/admin/payouts', authenticate, async (req, res) => {
   res.status(201).json(payout);
 });
 
-// Mark a payout as paid
 app.put('/api/admin/payouts/:id/pay', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
   const payout = await prisma.payout.update({
@@ -822,7 +813,6 @@ app.put('/api/admin/payouts/:id/pay', authenticate, async (req, res) => {
   res.json(payout);
 });
 
-// Get all payouts (history)
 app.get('/api/admin/payouts', authenticate, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
   const payouts = await prisma.payout.findMany({
@@ -835,7 +825,6 @@ app.get('/api/admin/payouts', authenticate, async (req, res) => {
   res.json(payouts);
 });
 
-// Get own payouts (for shop owner or driver)
 app.get('/api/my-payouts', authenticate, async (req, res) => {
   const payouts = await prisma.payout.findMany({
     where: { userId: req.user.id, role: req.user.role },
