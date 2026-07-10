@@ -394,6 +394,24 @@ app.put('/api/my-shop/orders/:id/payment-status', authenticate, shopOwnerAuth, a
   res.json({ success: true });
 });
 
+// Allow a customer to mark their own order as paid (used by Paystack inline popup)
+app.put('/api/orders/:id/payment-status', authenticate, async (req, res) => {
+  const { paymentStatus } = req.body;
+  if (!['paid'].includes(paymentStatus)) return res.status(400).json({ message: 'Invalid payment status' });
+
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  if (!order || order.customerId !== req.user.id) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
+
+  await prisma.order.update({
+    where: { id: req.params.id },
+    data: { paymentStatus },
+  });
+
+  res.json({ success: true });
+});
+
 app.post('/api/upload', authenticate, shopOwnerAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
   res.json({ imageUrl: `http://192.168.18.122:4000/uploads/${req.file.filename}` });
