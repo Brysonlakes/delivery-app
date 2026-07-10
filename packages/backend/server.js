@@ -489,7 +489,8 @@ app.get('/api/driver/my-orders', authenticate, driverAuth, async (req, res) => {
 // ===== PAYSTACK CHECKOUT (uses platform key) =====
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
-app.post('/api/paystack/initialize', authenticate, async (req, res) => {
+
+        app.post('/api/paystack/initialize', authenticate, async (req, res) => {
   const { orderId } = req.body;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
