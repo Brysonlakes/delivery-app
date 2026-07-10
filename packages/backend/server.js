@@ -532,7 +532,7 @@ app.get('/api/paystack/callback', async (req, res) => {
   try {
     const platformConfig = await prisma.platformConfig.findFirst();
     const secretKey = platformConfig?.paystackSecretKey;
-    if (!secretKey) return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?error=no_platform_key`);
+    if (!secretKey) return return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?error=no_platform_key`);
 
     const verification = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
@@ -552,7 +552,7 @@ app.get('/api/paystack/callback', async (req, res) => {
       io.to(`shop-${order.shopId}`).emit('newOrder', { orderId: order.id, message: `New paid order! Total: R${order.totalAmount.toFixed(2)}` });
       return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?paid=1`);
     } else {
-      return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?payment=failed`);
+     return res.redirect(`https://customer-app-lemon-one.vercel.app/orders?payment=failed`);
     }
   } catch (err) {
     console.error('Paystack callback error:', err.response?.data || err.message);
