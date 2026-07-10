@@ -490,7 +490,7 @@ app.get('/api/driver/my-orders', authenticate, driverAuth, async (req, res) => {
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
 
-        app.post('/api/paystack/initialize', authenticate, async (req, res) => {
+app.post('/api/paystack/initialize', authenticate, async (req, res) => {
   const { orderId } = req.body;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -509,7 +509,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
         email: req.user.email,
         amount: Math.round(order.totalAmount * 100),
         currency: 'ZAR',
-        callback_url: `https://customer-app-lemon-one.vercel.app/orders?paid=1`,
+        callback_url: `https://delivery-app-87x7.onrender.com/api/paystack/callback?orderId=${order.id}`,
         metadata: { orderId: order.id },
       },
       { headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' } }
